@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+{% endblock %}
+{% block content %}
+<h2>Common Chat Room</h2>
+<div id="chat-box" style="height:300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px;">
+  {% for msg in messages %}
+    <p>
+      <strong>
+        {% if msg.username != current_user.username %}
+          <a href="{{ url_for('main.personal_chat', username=msg.username) }}">{{ msg.username }}</a>
+        {% else %}
+          {{ msg.username }}
+        {% endif %}
+      :</strong> {{ msg.message }}
+      <small>({{ msg.timestamp.strftime('%Y-%m-%d %H:%M') }})</small>
+    </p>
+  {% endfor %}
+</div>
+<form id="chat-form">
+    {{ form.hidden_tag() }}
+    <div class="form-group">
+        {{ form.message(class="form-control", placeholder="Type your message here...") }}
+    </div>
+    <button type="submit" class="btn btn-primary">Send</button>
+</form>
+
+<!-- New section: Private Chat Requests -->
+<div id="private-requests" style="margin-top:20px;">
+  <h3>Private Chat Requests</h3>
+  <ul id="requests-list"></ul>
+</div>
+{% endblock %}
+{% block scripts %}
+<script type="text/javascript">
+    var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
+    
+    // On connect, join personal room.
+    socket.on('connect', function() {
+        console.log("[DEBUG] Socket connected (common chat).");
+        socket.emit('join_user', { username: "{{ current_user.username }}" });
+    });
+    
+    const chatForm = document.getElementById('chat-form');
+    const chatBox = document.getElementById('chat-box');
+
+    chatForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const messageInput = chatForm.querySelector('textarea');
+        const message = messageInput.value;
+        if (message.trim() !== '') {
+            socket.emit('send_message', { message: message, username: "{{ current_user.username }}" });
+            messageInput.value = '';
+        }
+    });
+
+    socket.on('receive_message', function(data) {
+        console.log("[DEBUG] Received common message:", data);
+        const p = document.createElement('p');
+        let usernameHTML = data.username;
+        if (data.username !== "{{ current_user.username }}") {
+            usernameHTML = '<a href="/personal_chat/' + data.username + '">' + data.username + '</a>';
+        }
+        p.innerHTML = '<strong>' + usernameHTML + ':</strong> ' + data.message +
+                      ' <small>(' + data.timestamp + ')</small>';
+        chatBox.appendChild(p);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    });
+
+    // Handle incoming private chat requests.
+    socket.on('private_message_request', function(data) {
+        console.log("[DEBUG] Received private message request:", data);
+        var li = document.createElement('li');
+        li.innerHTML = "User " + data.sender + " says: " + data.message + " (" + data.timestamp + ") ";
+        
+        var acceptBtn = document.createElement('button');
+        acceptBtn.textContent = "Accept";
+        acceptBtn.style.marginLeft = "10px";
+        acceptBtn.onclick = function() {
+            // Navigate to personal chat page for that user.
+            window.location.href = "/personal_chat/" + data.sender;
+        };
+
+        var rejectBtn = document.createElement('button');
+        rejectBtn.textContent = "Reject";
+        rejectBtn.style.marginLeft = "5px";
+        rejectBtn.onclick = function() {
+            socket.emit('reject_private_message', { sender: "{{ current_user.username }}", recipient: data.sender });
+            li.innerHTML += " - Rejected";
+            acceptBtn.disabled = true;
+            rejectBtn.disabled = true;
+        };
+
+        li.appendChild(acceptBtn);
+        li.appendChild(rejectBtn);
+
+        document.getElementById('requests-list').appendChild(li);
+    });
+
+    socket.on('error', function(data) {
+        console.error("[DEBUG] Error:", data.error);
+        alert(data.error);
+    });
+</script>
+{% endblock %}
