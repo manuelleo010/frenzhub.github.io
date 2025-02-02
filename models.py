@@ -6,6 +6,8 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
     password = db.Column(db.String(128), nullable=False)
+    # New column: True if the user is currently logged in.
+    logged_in = db.Column(db.Boolean, default=False)
     
     def __repr__(self):
         return f'<User {self.username}>'

@@ -1,3 +1,6 @@
 flaske-env
 __pycache__
 app.db
+*.db
+*.sqlite3
+*.py[cod]
