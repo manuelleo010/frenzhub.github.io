@@ -73,14 +73,16 @@ body {
 }
 
 /* Responsive design for mobile devices */
-@media (max-width: 600px) {
+@media (max-width: 700px) {
     .container {
         padding: 10px;
     }
     
     .navbar {
-        flex-direction: column;
-        align-items: flex-start;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+        align-items: center;
     }
     
     .navbar .nav-links {
@@ -97,6 +99,7 @@ body {
     #chat-box, #private-chat-box {
         max-height: 200px;
         font-size: 0.9em;
+        height: 80%;
     }
     
     .form-control {
