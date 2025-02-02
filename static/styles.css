@@ -12,16 +12,39 @@ body {
     padding: 15px;
 }
 
+/* Navbar */
 .navbar {
     background-color: #ffffff;
     border-bottom: 1px solid #ddd;
     padding: 10px 15px;
     margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .navbar a.navbar-brand {
     font-size: 1.5em;
     font-weight: bold;
+    text-decoration: none;
+    color: #333;
+}
+
+.navbar .nav-links {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+}
+
+.navbar .nav-links li {
+    margin-left: 15px;
+}
+
+.navbar .nav-links li a {
+    text-decoration: none;
+    color: #333;
+    font-size: 1em;
 }
 
 /* Chat box styles */
@@ -35,28 +58,6 @@ body {
     margin-bottom: 10px;
 }
 
-/* Private chat requests section */
-#private-requests {
-    background-color: #fff;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    margin-top: 20px;
-}
-
-#private-requests h3 {
-    margin-top: 0;
-}
-
-#requests-list {
-    list-style-type: none;
-    padding-left: 0;
-}
-
-#requests-list li {
-    margin-bottom: 10px;
-}
-
 /* Form controls */
 .form-control {
     width: 100%;
@@ -66,6 +67,11 @@ body {
     border: 1px solid #ccc;
 }
 
+/* Flash messages */
+#flash-messages .alert {
+    margin-bottom: 10px;
+}
+
 /* Responsive design for mobile devices */
 @media (max-width: 600px) {
     .container {
@@ -73,8 +79,19 @@ body {
     }
     
     .navbar {
-        padding: 10px;
-        font-size: 0.9em;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .navbar .nav-links {
+        flex-direction: column;
+        width: 100%;
+        margin-top: 10px;
+    }
+    
+    .navbar .nav-links li {
+        margin-left: 0;
+        margin-bottom: 5px;
     }
     
     #chat-box, #private-chat-box {
