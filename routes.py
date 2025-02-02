@@ -6,6 +6,7 @@ from models import User, Message, PrivateMessage
 from forms import RegistrationForm, LoginForm, MessageForm
 from flask_socketio import emit, join_room
 from sqlalchemy import or_, and_
+import datetime
 
 main = Blueprint('main', __name__)
 
@@ -55,6 +56,15 @@ def logout():
 def common_chat():
     form = MessageForm()
     messages = Message.query.order_by(Message.timestamp.asc()).all()
+    # Mark messages as read if not from the current user.
+    now = datetime.datetime.utcnow()
+    updated = False
+    for msg in messages:
+        if msg.username != current_user.username and msg.read_at is None:
+            msg.read_at = now
+            updated = True
+    if updated:
+        db.session.commit()
     return render_template('common_chat.html', form=form, messages=messages)
 
 @main.route('/personal_chat/<username>', methods=['GET'])
@@ -71,9 +81,19 @@ def personal_chat(username):
             and_(PrivateMessage.sender_id == recipient.id, PrivateMessage.recipient_id == current_user.id)
         )
     ).order_by(PrivateMessage.timestamp.asc()).all()
+    # Mark messages as read (if not sent by the current user)
+    now = datetime.datetime.utcnow()
+    updated = False
+    for msg in messages:
+        # Only mark as read if the current user did not send it
+        if msg.sender_id != current_user.id and msg.read_at is None:
+            msg.read_at = now
+            updated = True
+    if updated:
+        db.session.commit()
     return render_template('personal_chat.html', form=form, messages=messages, recipient=recipient)
 
-# Socket.IO event: When a client connects, they can join a personal room.
+# Socket.IO event: When a client connects, they join their personal room.
 @socketio.on('join_user')
 def on_join_user(data):
     username = data.get('username')
@@ -115,14 +135,13 @@ def handle_send_private_message_event(data):
         private_msg = PrivateMessage(sender_id=sender.id, recipient_id=recipient.id, message=msg_text)
         db.session.add(private_msg)
         db.session.commit()
-        # Emit to a private chat room if both users are in personal_chat
         room = get_private_room(sender.id, recipient.id)
         emit('receive_private_message', {
             'message': msg_text,
             'sender': sender_username,
             'timestamp': private_msg.timestamp.strftime('%Y-%m-%d %H:%M')
         }, room=room)
-        # Also emit a private message request to the recipient’s personal room.
+        # Also, send a private message request to the recipient’s personal room.
         emit('private_message_request', {
             'message': msg_text,
             'sender': sender_username,

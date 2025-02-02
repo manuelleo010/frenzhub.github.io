@@ -20,6 +20,8 @@ class Message(db.Model):
     username = db.Column(db.String(64), nullable=False)
     message = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    # New column: set when at least one person (other than the sender) reads the message.
+    read_at = db.Column(db.DateTime, nullable=True)
     
     def __repr__(self):
         return f'<Message {self.message}>'
@@ -30,6 +32,8 @@ class PrivateMessage(db.Model):
     recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     message = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    # New column: set when one of the participants (other than the sender) reads the message.
+    read_at = db.Column(db.DateTime, nullable=True)
     
     def __repr__(self):
         return f'<PrivateMessage {self.message}>'

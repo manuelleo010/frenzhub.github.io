@@ -1,15 +1,93 @@
+/* Base styles */
 body {
     background-color: #f8f9fa;
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
 }
 
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 15px;
+}
+
+.navbar {
+    background-color: #ffffff;
+    border-bottom: 1px solid #ddd;
+    padding: 10px 15px;
+    margin-bottom: 20px;
+}
+
+.navbar a.navbar-brand {
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+/* Chat box styles */
 #chat-box, #private-chat-box {
     background-color: #ffffff;
     border-radius: 5px;
     padding: 10px;
     border: 1px solid #ccc;
+    max-height: 300px;
     overflow-y: auto;
+    margin-bottom: 10px;
 }
 
-.navbar {
-    margin-bottom: 20px;
+/* Private chat requests section */
+#private-requests {
+    background-color: #fff;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin-top: 20px;
+}
+
+#private-requests h3 {
+    margin-top: 0;
+}
+
+#requests-list {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+#requests-list li {
+    margin-bottom: 10px;
+}
+
+/* Form controls */
+.form-control {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+/* Responsive design for mobile devices */
+@media (max-width: 600px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .navbar {
+        padding: 10px;
+        font-size: 0.9em;
+    }
+    
+    #chat-box, #private-chat-box {
+        max-height: 200px;
+        font-size: 0.9em;
+    }
+    
+    .form-control {
+        font-size: 0.9em;
+    }
+    
+    button.btn {
+        font-size: 0.9em;
+        padding: 8px 12px;
+    }
 }
