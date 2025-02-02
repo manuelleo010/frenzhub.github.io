@@ -19,7 +19,8 @@ body {
     padding: 10px 15px;
     margin-bottom: 20px;
     display: flex;
-    justify-content: space-between;
+    flex-direction: row;
+    justify-content: space-around;
     align-items: center;
 }
 
@@ -53,7 +54,7 @@ body {
     border-radius: 5px;
     padding: 10px;
     border: 1px solid #ccc;
-    max-height: 300px;
+    height: 70%;
     overflow-y: auto;
     margin-bottom: 10px;
 }
@@ -66,14 +67,30 @@ body {
     border-radius: 4px;
     border: 1px solid #ccc;
 }
-
+.btn-primary{
+    background-color: #007bff;
+    border-color: #007bff;
+    color: #fff;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    margin-bottom: 10px;
+}
+.btn-primary:hover{
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
 /* Flash messages */
 #flash-messages .alert {
     margin-bottom: 10px;
 }
 
 /* Responsive design for mobile devices */
-@media (max-width: 700px) {
+@media (max-width: 720px) {
     .container {
         padding: 10px;
     }

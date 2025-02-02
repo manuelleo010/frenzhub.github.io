@@ -6,7 +6,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
     password = db.Column(db.String(128), nullable=False)
-    # New column: True if the user is currently logged in.
+    # New column to track if the user is logged in.
     logged_in = db.Column(db.Boolean, default=False)
     
     def __repr__(self):
@@ -16,13 +16,13 @@ class User(UserMixin, db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+# (Message and PrivateMessage models remain as in previous versions.)
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     username = db.Column(db.String(64), nullable=False)
     message = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    # New column: set when at least one person (other than the sender) reads the message.
     read_at = db.Column(db.DateTime, nullable=True)
     
     def __repr__(self):
@@ -34,7 +34,6 @@ class PrivateMessage(db.Model):
     recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     message = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    # New column: set when one of the participants (other than the sender) reads the message.
     read_at = db.Column(db.DateTime, nullable=True)
     
     def __repr__(self):

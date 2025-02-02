@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Chat App</title>
-    <!-- Bootstrap CSS for quick styling (optional) -->
+    <!-- Optional Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
     <!-- Custom Responsive Styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
@@ -39,7 +39,11 @@
     
     {% block scripts %}
     <script type="text/javascript">
-      // Auto-hide flash messages after 3 seconds
+      // Determine flash message hide delay based on current page:
+      var flashDelay = 3000;
+      if (window.location.pathname.includes('common_chat') || window.location.pathname.includes('personal_chat')) {
+          flashDelay = 2000;
+      }
       setTimeout(function() {
           var flashMessages = document.getElementById('flash-messages');
           if (flashMessages) {
@@ -47,7 +51,29 @@
               flashMessages.style.opacity = 0;
               setTimeout(function(){ flashMessages.remove(); }, 500);
           }
-      }, 1000);
+      }, flashDelay);
+      
+      // Inactivity detection: if no activity for 2 minutes, alert and log out.
+      (function() {
+          var inactivityTime = function () {
+              var time;
+              function resetTimer() {
+                  clearTimeout(time);
+                  time = setTimeout(logout, 120000); // 2 minutes = 120,000 ms
+              }
+              function logout() {
+                  alert("You have been inactive for 2 minutes. Please log in again.");
+                  window.location.href = "{{ url_for('main.logout') }}";
+              }
+              // Events that reset the inactivity timer
+              window.onload = resetTimer;
+              document.onmousemove = resetTimer;
+              document.onkeydown = resetTimer;
+              document.onscroll = resetTimer;
+              document.onclick = resetTimer;
+          };
+          inactivityTime();
+      })();
     </script>
     {% endblock %}
 </body>
