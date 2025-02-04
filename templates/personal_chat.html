@@ -27,7 +27,10 @@
 <form id="private-chat-form" enctype="multipart/form-data">
     {{ form.hidden_tag() }}
     {{ form.message(class="form-control", placeholder="Type your message here...") }}
-    <input type="file" id="private-media-file" accept="image/*,video/*">
+    <!-- Attachment icon -->
+    <span class="attachment-icon" onclick="document.getElementById('private-media-file').click();">&#128206;</span>
+    <!-- Hidden file input -->
+    <input type="file" id="private-media-file" class="hidden-file-input" accept="image/*,video/*">
     <input type="hidden" id="private_file_url" value="">
     <input type="hidden" id="private_file_type" value="">
     <button type="submit" class="btn btn-primary">Send</button>

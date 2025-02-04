@@ -18,6 +18,29 @@ def allowed_file(filename):
     ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'mp4', 'mov', 'avi'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+@main.route('/personal_chats', methods=['GET'])
+@login_required
+def personal_chats():
+    # Get all private messages involving the current user.
+    messages = PrivateMessage.query.filter(
+        or_(
+            PrivateMessage.sender_id == current_user.id,
+            PrivateMessage.recipient_id == current_user.id
+        )
+    ).all()
+    # Build a set of user IDs that are in conversation with current_user.
+    contact_ids = set()
+    for msg in messages:
+        if msg.sender_id != current_user.id:
+            contact_ids.add(msg.sender_id)
+        if msg.recipient_id != current_user.id:
+            contact_ids.add(msg.recipient_id)
+    # Query the User table for these IDs.
+    contacts = User.query.filter(User.id.in_(contact_ids)).all()
+    # Render a new template listing these contacts.
+    return render_template('personal_chats.html', contacts=contacts)
+
+
 # Route to handle media upload via AJAX.
 @main.route('/upload_media', methods=['POST'])
 @login_required

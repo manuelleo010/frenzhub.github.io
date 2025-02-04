@@ -15,6 +15,8 @@
       <a class="navbar-brand" href="{{ url_for('main.common_chat') }}">Chat App</a>
       <ul class="nav-links">
         {% if current_user.is_authenticated %}
+          <li><a href="{{ url_for('main.common_chat') }}">Common Chat</a></li>
+          <li><a href="{{ url_for('main.personal_chats') }}">Personal Chats</a></li>
           <li><a href="{{ url_for('main.logout') }}">Logout</a></li>
         {% else %}
           <li><a href="{{ url_for('main.login') }}">Login</a></li>
@@ -39,7 +41,7 @@
     
     {% block scripts %}
     <script type="text/javascript">
-      // Auto-hide flash messages after 3 seconds on chat pages
+      // Auto-hide flash messages after 3 seconds on chat pages (or adjust delay as needed)
       var flashDelay = 3000;
       if (window.location.pathname.includes('common_chat') || window.location.pathname.includes('personal_chat')) {
           flashDelay = 3000;
@@ -53,7 +55,7 @@
           }
       }, flashDelay);
       
-      // Inactivity detection: 15 minutes (900,000 ms) of no activity triggers logout.
+      // Inactivity detection: 15 minutes of inactivity triggers logout.
       (function() {
           var inactivityTime = function () {
               var time;
