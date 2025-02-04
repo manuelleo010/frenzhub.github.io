@@ -9,7 +9,7 @@ from flask import (
     Flask, render_template, request, redirect, url_for,
     session, flash, jsonify
 )
-from flask_socketio import SocketIO, join_room, leave_room, emit, disconnect, request
+from flask_socketio import SocketIO, join_room, leave_room, emit, disconnect
 from werkzeug.utils import secure_filename
 
 from models import db, User
