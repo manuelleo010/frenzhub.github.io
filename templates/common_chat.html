@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Common Chat Room</h2>
+<!-- Chat container with fixed height -->
 <div id="chat-box" style="height:450px; overflow-y:auto; border:1px solid #ddd; padding:10px;">
   {% for msg in messages %}
     <p>
@@ -27,11 +28,11 @@
 <form id="chat-form" enctype="multipart/form-data">
     {{ form.hidden_tag() }}
     {{ form.message(class="form-control", placeholder="Type your message here...") }}
-    <!-- Attachment icon -->
+    <!-- Attachment icon triggers hidden file input -->
     <span class="attachment-icon" onclick="document.getElementById('media-file').click();">&#128206;</span>
     <!-- Hidden file input -->
     <input type="file" id="media-file" class="hidden-file-input" accept="image/*,video/*">
-    <!-- Hidden fields for file info -->
+    <!-- Hidden fields to store file upload results -->
     <input type="hidden" id="file_url" value="">
     <input type="hidden" id="file_type" value="">
     <button type="submit" class="btn btn-primary">Send</button>
@@ -44,18 +45,18 @@
     
     socket.on('connect', function() {
         console.log("[DEBUG] Socket connected in common chat.");
-        // Join the personal room for the user (for private message notifications, etc.)
+        // Join the user's personal room (for notifications, etc.)
         socket.emit('join_user', { username: "{{ current_user.username }}" });
     });
     
-    // Get DOM elements
+    // Get references to DOM elements
     const chatForm = document.getElementById('chat-form');
     const chatBox = document.getElementById('chat-box');
     const mediaInput = document.getElementById('media-file');
     const fileUrlField = document.getElementById('file_url');
     const fileTypeField = document.getElementById('file_type');
     
-    // When a file is selected, upload it via AJAX to the server.
+    // When a file is selected, upload it via AJAX
     mediaInput.onchange = function() {
         var file = mediaInput.files[0];
         if (!file) return;
@@ -73,32 +74,33 @@
             } else {
                 fileUrlField.value = data.file_url;
                 fileTypeField.value = data.file_type;
-                console.log("[DEBUG] Uploaded file:", data);
+                console.log("[DEBUG] File uploaded:", data);
             }
         })
         .catch(err => console.error("[DEBUG] Upload error:", err));
     };
     
-    // When the form is submitted, send the message (text and any media info) via Socket.IO.
+    // When the chat form is submitted, emit the message
     chatForm.addEventListener('submit', function(e) {
         e.preventDefault();
         const messageText = chatForm.querySelector('textarea').value;
         const file_url = fileUrlField.value;
         const file_type = fileTypeField.value;
+        // Emit the message via Socket.IO
         socket.emit('send_message', { 
             message: messageText, 
             username: "{{ current_user.username }}", 
             file_url: file_url, 
             file_type: file_type 
         });
-        // Clear the message and file fields.
+        // Clear the fields
         chatForm.querySelector('textarea').value = "";
         mediaInput.value = "";
         fileUrlField.value = "";
         fileTypeField.value = "";
     });
     
-    // When a message is received from the server, append it to the chat box.
+    // Listen for the 'receive_message' event and append the message to the chat box
     socket.on('receive_message', function(data) {
         console.log("[DEBUG] Received message:", data);
         var p = document.createElement('p');
@@ -117,10 +119,11 @@
         content += ' <small>(' + data.timestamp + ')</small>';
         p.innerHTML = content;
         chatBox.appendChild(p);
-        // Auto-scroll to the bottom
+        // Scroll to the bottom so the new message is visible
         chatBox.scrollTop = chatBox.scrollHeight;
     });
     
+    // Handle error events from the server
     socket.on('error', function(data) {
         console.error("[DEBUG] Socket error:", data.error);
         alert(data.error);

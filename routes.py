@@ -172,15 +172,25 @@ def on_join_user(data):
 def handle_send_message_event(data):
     msg_text = data.get('message')
     username = data.get('username')
-    file_url = data.get('file_url')  # May be None
-    file_type = data.get('file_type')  # May be None
-    print(f"[DEBUG] Received common message from {username}: {msg_text} | file: {file_url}")
+    file_url = data.get('file_url')  # May be empty string or None
+    file_type = data.get('file_type')
+    print(f"[DEBUG] Received common message from {username}: '{msg_text}' | file: {file_url}")
+    
+    # Lookup the user (assumes user exists)
     user = User.query.filter_by(username=username).first()
-    if user and (msg_text or file_url):
-        message = Message(user_id=user.id, username=user.username, message=msg_text,
-                          file_url=file_url, file_type=file_type)
+    if user and (msg_text.strip() or file_url):
+        # Create the message record (text and/or file)
+        message = Message(
+            user_id=user.id,
+            username=user.username,
+            message=msg_text,
+            file_url=file_url,
+            file_type=file_type
+        )
         db.session.add(message)
         db.session.commit()
+        
+        # Emit the message to all clients
         emit('receive_message', {
             'message': msg_text,
             'username': username,
@@ -189,8 +199,8 @@ def handle_send_message_event(data):
             'file_type': file_type
         }, broadcast=True)
     else:
-        print("[DEBUG] Error in send_message: invalid message or user")
         emit('error', {'error': 'Invalid message or user.'})
+
 
 @socketio.on('send_private_message')
 def handle_send_private_message_event(data):
