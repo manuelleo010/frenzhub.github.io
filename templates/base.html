@@ -3,49 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <title>Chat App</title>
-    <!-- Optional Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
-    <!-- Custom Responsive Styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     {% block head %}{% endblock %}
 </head>
 <body>
-    <!-- Navigation Bar -->
     <nav class="navbar">
-      <a class="navbar-brand" href="{{ url_for('main.common_chat') }}">Chat App</a>
-      <ul class="nav-links">
-        {% if current_user.is_authenticated %}
-          <li><a href="{{ url_for('main.common_chat') }}">Common Chat</a></li>
-          <li><a href="{{ url_for('main.personal_chats') }}">Personal Chats</a></li>
-          <li><a href="{{ url_for('main.logout') }}">Logout</a></li>
-        {% else %}
-          <li><a href="{{ url_for('main.login') }}">Login</a></li>
-          <li><a href="{{ url_for('main.register') }}">Register</a></li>
-        {% endif %}
-      </ul>
+        <a class="navbar-brand" href="{{ url_for('main.common_chat') }}">Chat App</a>
+        <ul class="nav-links">
+            {% if current_user.is_authenticated %}
+                <li><a href="{{ url_for('main.common_chat') }}">Common Chat</a></li>
+                <li><a href="{{ url_for('main.personal_chats') }}">Personal Chats</a></li>
+                <li><a href="{{ url_for('main.logout') }}">Logout</a></li>
+            {% else %}
+                <li><a href="{{ url_for('main.login') }}">Login</a></li>
+                <li><a href="{{ url_for('main.register') }}">Register</a></li>
+            {% endif %}
+        </ul>
     </nav>
-    
     <div class="container">
-      <!-- Flash Messages -->
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          <div id="flash-messages">
-            {% for category, message in messages %}
-              <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-          </div>
-        {% endif %}
-      {% endwith %}
-      {% block content %}{% endblock %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div id="flash-messages">
+              {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
     </div>
-    
     {% block scripts %}
-    <script type="text/javascript">
-      // Auto-hide flash messages after 3 seconds on chat pages (or adjust delay as needed)
-      var flashDelay = 3000;
-      if (window.location.pathname.includes('common_chat') || window.location.pathname.includes('personal_chat')) {
-          flashDelay = 3000;
-      }
+    <script>
+      // Auto-hide flash messages after 3 seconds
       setTimeout(function() {
           var flashMessages = document.getElementById('flash-messages');
           if (flashMessages) {
@@ -53,28 +42,7 @@
               flashMessages.style.opacity = 0;
               setTimeout(function(){ flashMessages.remove(); }, 500);
           }
-      }, flashDelay);
-      
-      // Inactivity detection: 15 minutes of inactivity triggers logout.
-      (function() {
-          var inactivityTime = function () {
-              var time;
-              function resetTimer() {
-                  clearTimeout(time);
-                  time = setTimeout(logout, 900000);
-              }
-              function logout() {
-                  alert("You have been inactive for 15 minutes. Please log in again.");
-                  window.location.href = "{{ url_for('main.logout') }}";
-              }
-              window.onload = resetTimer;
-              document.onmousemove = resetTimer;
-              document.onkeydown = resetTimer;
-              document.onscroll = resetTimer;
-              document.onclick = resetTimer;
-          };
-          inactivityTime();
-      })();
+      }, 3000);
     </script>
     {% endblock %}
 </body>

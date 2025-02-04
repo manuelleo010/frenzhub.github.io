@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Private Chat with {{ recipient.username }}</h2>
-<div id="private-chat-box">
+<div id="private-chat-box" style="height:450px; overflow-y:auto; border:1px solid #ddd; padding:10px;">
   {% for msg in messages %}
     <p>
       <strong>
@@ -10,110 +10,46 @@
         {% else %}
           {{ recipient.username }}
         {% endif %}
-      :</strong>
-      {% if msg.message %}{{ msg.message }}{% endif %}
-      {% if msg.file_url %}
-         <br>
-         {% if msg.file_type == "image" %}
-           <img src="{{ msg.file_url }}" alt="Image" style="max-width:200px;">
-         {% else %}
-           <video src="{{ msg.file_url }}" controls style="max-width:200px;"></video>
-         {% endif %}
-      {% endif %}
+      :</strong> {{ msg.message }}
       <small>({{ msg.timestamp.strftime('%Y-%m-%d %H:%M') }})</small>
     </p>
   {% endfor %}
 </div>
-<form id="private-chat-form" enctype="multipart/form-data">
+<form id="private-chat-form">
     {{ form.hidden_tag() }}
     {{ form.message(class="form-control", placeholder="Type your message here...") }}
-    <!-- Attachment icon -->
-    <span class="attachment-icon" onclick="document.getElementById('private-media-file').click();">&#128206;</span>
-    <!-- Hidden file input -->
-    <input type="file" id="private-media-file" class="hidden-file-input" accept="image/*,video/*">
-    <input type="hidden" id="private_file_url" value="">
-    <input type="hidden" id="private_file_type" value="">
     <button type="submit" class="btn btn-primary">Send</button>
 </form>
 {% endblock %}
 {% block scripts %}
-<script type="text/javascript">
+<script>
     var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
-    
-    socket.on('connect', function() {
-        console.log("[DEBUG] Socket connected (private chat).");
-        socket.emit('join_user', { username: "{{ current_user.username }}" });
-        socket.emit('join_private', { sender: "{{ current_user.username }}", recipient: "{{ recipient.username }}" });
+    socket.on('connect', function(){
+        console.log("Socket connected in private chat");
+        socket.emit('join_user', {username: "{{ current_user.username }}"});
+        socket.emit('join_private', {sender: "{{ current_user.username }}", recipient: "{{ recipient.username }}"});
     });
     
-    const privateChatForm = document.getElementById('private-chat-form');
-    const privateChatBox = document.getElementById('private-chat-box');
-    const privateMediaInput = document.getElementById('private-media-file');
-    const privateFileUrlField = document.getElementById('private_file_url');
-    const privateFileTypeField = document.getElementById('private_file_type');
+    var chatForm = document.getElementById('private-chat-form');
+    var chatBox = document.getElementById('private-chat-box');
     
-    privateMediaInput.onchange = function() {
-        var file = privateMediaInput.files[0];
-        if (!file) return;
-        var formData = new FormData();
-        formData.append('file', file);
-        fetch("{{ url_for('main.upload_media') }}", {
-            method: 'POST',
-            body: formData,
-            credentials: 'include'
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                alert(data.error);
-            } else {
-                privateFileUrlField.value = data.file_url;
-                privateFileTypeField.value = data.file_type;
-            }
-        })
-        .catch(err => console.error(err));
-    };
-    
-    privateChatForm.addEventListener('submit', function(e) {
+    chatForm.addEventListener('submit', function(e){
         e.preventDefault();
-        const messageText = privateChatForm.querySelector('textarea').value;
-        const file_url = privateFileUrlField.value;
-        const file_type = privateFileTypeField.value;
-        socket.emit('send_private_message', { 
-            message: messageText, 
-            sender: "{{ current_user.username }}", 
-            recipient: "{{ recipient.username }}",
-            file_url: file_url,
-            file_type: file_type
-        });
-        privateChatForm.querySelector('textarea').value = "";
-        privateMediaInput.value = "";
-        privateFileUrlField.value = "";
-        privateFileTypeField.value = "";
+        var msg = chatForm.querySelector('textarea').value;
+        if(msg.trim() === "") return;
+        socket.emit('send_private_message', {message: msg, sender: "{{ current_user.username }}", recipient: "{{ recipient.username }}"});
+        chatForm.querySelector('textarea').value = "";
     });
     
-    socket.on('receive_private_message', function(data) {
-        console.log("[DEBUG] Received private message:", data);
+    socket.on('receive_private_message', function(data){
+        console.log("Received private message:", data);
         var p = document.createElement('p');
-        p.innerHTML = '<strong>' + data.sender + ':</strong> ' + (data.message || "");
-        if (data.file_url) {
-            if (data.file_type === "image") {
-                p.innerHTML += '<br><img src="' + data.file_url + '" alt="Image" style="max-width:200px;">';
-            } else {
-                p.innerHTML += '<br><video src="' + data.file_url + '" controls style="max-width:200px;"></video>';
-            }
-        }
-        p.innerHTML += ' <small>(' + data.timestamp + ')</small>';
-        privateChatBox.appendChild(p);
-        privateChatBox.scrollTop = privateChatBox.scrollHeight;
+        p.innerHTML = "<strong>" + data.sender + ":</strong> " + data.message + " <small>(" + data.timestamp + ")</small>";
+        chatBox.appendChild(p);
+        chatBox.scrollTop = chatBox.scrollHeight;
     });
     
-    socket.on('private_chat_rejected', function(data) {
-        alert(data.msg);
-    });
-    
-    socket.on('error', function(data) {
-        console.error("[DEBUG] Error:", data.error);
+    socket.on('error', function(data){
         alert(data.error);
     });
 </script>

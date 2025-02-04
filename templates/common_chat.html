@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Common Chat Room</h2>
-<!-- Chat container with fixed height -->
 <div id="chat-box" style="height:450px; overflow-y:auto; border:1px solid #ddd; padding:10px;">
   {% for msg in messages %}
     <p>
@@ -11,121 +10,45 @@
         {% else %}
           {{ msg.username }}
         {% endif %}
-      :</strong>
-      {% if msg.message %}{{ msg.message }}{% endif %}
-      {% if msg.file_url %}
-         <br>
-         {% if msg.file_type == "image" %}
-           <img src="{{ msg.file_url }}" alt="Image" style="max-width:200px;">
-         {% else %}
-           <video src="{{ msg.file_url }}" controls style="max-width:200px;"></video>
-         {% endif %}
-      {% endif %}
+      :</strong> {{ msg.message }}
       <small>({{ msg.timestamp.strftime('%Y-%m-%d %H:%M') }})</small>
     </p>
   {% endfor %}
 </div>
-<form id="chat-form" enctype="multipart/form-data">
+<form id="chat-form">
     {{ form.hidden_tag() }}
     {{ form.message(class="form-control", placeholder="Type your message here...") }}
-    <!-- Attachment icon triggers hidden file input -->
-    <span class="attachment-icon" onclick="document.getElementById('media-file').click();">&#128206;</span>
-    <!-- Hidden file input -->
-    <input type="file" id="media-file" class="hidden-file-input" accept="image/*,video/*">
-    <!-- Hidden fields to store file upload results -->
-    <input type="hidden" id="file_url" value="">
-    <input type="hidden" id="file_type" value="">
     <button type="submit" class="btn btn-primary">Send</button>
 </form>
 {% endblock %}
 {% block scripts %}
-<script type="text/javascript">
-    // Connect to the Socket.IO server
+<script>
     var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
-    
-    socket.on('connect', function() {
-        console.log("[DEBUG] Socket connected in common chat.");
-        // Join the user's personal room (for notifications, etc.)
-        socket.emit('join_user', { username: "{{ current_user.username }}" });
+    socket.on('connect', function(){
+        console.log("Socket connected in common chat");
+        socket.emit('join_user', {username: "{{ current_user.username }}"});
     });
     
-    // Get references to DOM elements
-    const chatForm = document.getElementById('chat-form');
-    const chatBox = document.getElementById('chat-box');
-    const mediaInput = document.getElementById('media-file');
-    const fileUrlField = document.getElementById('file_url');
-    const fileTypeField = document.getElementById('file_type');
+    var chatForm = document.getElementById('chat-form');
+    var chatBox = document.getElementById('chat-box');
     
-    // When a file is selected, upload it via AJAX
-    mediaInput.onchange = function() {
-        var file = mediaInput.files[0];
-        if (!file) return;
-        var formData = new FormData();
-        formData.append('file', file);
-        fetch("{{ url_for('main.upload_media') }}", {
-            method: 'POST',
-            body: formData,
-            credentials: 'include'
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                alert(data.error);
-            } else {
-                fileUrlField.value = data.file_url;
-                fileTypeField.value = data.file_type;
-                console.log("[DEBUG] File uploaded:", data);
-            }
-        })
-        .catch(err => console.error("[DEBUG] Upload error:", err));
-    };
-    
-    // When the chat form is submitted, emit the message
-    chatForm.addEventListener('submit', function(e) {
+    chatForm.addEventListener('submit', function(e){
         e.preventDefault();
-        const messageText = chatForm.querySelector('textarea').value;
-        const file_url = fileUrlField.value;
-        const file_type = fileTypeField.value;
-        // Emit the message via Socket.IO
-        socket.emit('send_message', { 
-            message: messageText, 
-            username: "{{ current_user.username }}", 
-            file_url: file_url, 
-            file_type: file_type 
-        });
-        // Clear the fields
+        var msg = chatForm.querySelector('textarea').value;
+        if(msg.trim() === "") return;
+        socket.emit('send_message', {message: msg, username: "{{ current_user.username }}"});
         chatForm.querySelector('textarea').value = "";
-        mediaInput.value = "";
-        fileUrlField.value = "";
-        fileTypeField.value = "";
     });
     
-    // Listen for the 'receive_message' event and append the message to the chat box
-    socket.on('receive_message', function(data) {
-        console.log("[DEBUG] Received message:", data);
+    socket.on('receive_message', function(data){
+        console.log("Received message:", data);
         var p = document.createElement('p');
-        var usernameHTML = data.username;
-        if (data.username !== "{{ current_user.username }}") {
-            usernameHTML = '<a href="/personal_chat/' + data.username + '">' + data.username + '</a>';
-        }
-        var content = '<strong>' + usernameHTML + ':</strong> ' + (data.message || "");
-        if (data.file_url) {
-            if (data.file_type === "image") {
-                content += '<br><img src="' + data.file_url + '" alt="Image" style="max-width:200px;">';
-            } else {
-                content += '<br><video src="' + data.file_url + '" controls style="max-width:200px;"></video>';
-            }
-        }
-        content += ' <small>(' + data.timestamp + ')</small>';
-        p.innerHTML = content;
+        p.innerHTML = "<strong>" + data.username + ":</strong> " + data.message + " <small>(" + data.timestamp + ")</small>";
         chatBox.appendChild(p);
-        // Scroll to the bottom so the new message is visible
         chatBox.scrollTop = chatBox.scrollHeight;
     });
     
-    // Handle error events from the server
-    socket.on('error', function(data) {
-        console.error("[DEBUG] Socket error:", data.error);
+    socket.on('error', function(data){
         alert(data.error);
     });
 </script>

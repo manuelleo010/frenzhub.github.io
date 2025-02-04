@@ -2,14 +2,12 @@
 {% block content %}
 <h2>Your Personal Chats</h2>
 {% if contacts %}
-  <ul class="list-group">
+  <ul>
     {% for contact in contacts %}
-      <li class="list-group-item">
-        <a href="{{ url_for('main.personal_chat', username=contact.username) }}">{{ contact.username }}</a>
-      </li>
+      <li><a href="{{ url_for('main.personal_chat', username=contact.username) }}">{{ contact.username }}</a></li>
     {% endfor %}
   </ul>
 {% else %}
-  <p>You have not started any personal chats yet.</p>
+  <p>You have no personal chats yet.</p>
 {% endif %}
 {% endblock %}

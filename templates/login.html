@@ -3,17 +3,17 @@
 <h2>Login</h2>
 <form method="POST">
     {{ form.hidden_tag() }}
-    <div class="form-group">
-        {{ form.username.label(class="form-control-label") }}
-        {{ form.username(class="form-control") }}
+    <div>
+        {{ form.username.label }}<br>
+        {{ form.username() }}
     </div>
-    <div class="form-group">
-        {{ form.password.label(class="form-control-label") }}
-        {{ form.password(class="form-control") }}
+    <div>
+        {{ form.password.label }}<br>
+        {{ form.password() }}
     </div>
-    <div class="form-group">
-        {{ form.submit(class="btn btn-primary") }}
+    <div>
+        {{ form.submit() }}
     </div>
 </form>
-<p>Don't have an account? <a href="{{ url_for('main.register') }}">Register</a></p>
+<p>Don't have an account? <a href="{{ url_for('main.register') }}">Register here</a>.</p>
 {% endblock %}
