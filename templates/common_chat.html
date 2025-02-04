@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Common Chat Room</h2>
-<div id="chat-box">
+<div id="chat-box" style="height:450px; overflow-y:auto; border:1px solid #ddd; padding:10px;">
   {% for msg in messages %}
     <p>
       <strong>
@@ -31,7 +31,7 @@
     <span class="attachment-icon" onclick="document.getElementById('media-file').click();">&#128206;</span>
     <!-- Hidden file input -->
     <input type="file" id="media-file" class="hidden-file-input" accept="image/*,video/*">
-    <!-- Hidden fields for storing uploaded file info -->
+    <!-- Hidden fields for file info -->
     <input type="hidden" id="file_url" value="">
     <input type="hidden" id="file_type" value="">
     <button type="submit" class="btn btn-primary">Send</button>
@@ -39,20 +39,23 @@
 {% endblock %}
 {% block scripts %}
 <script type="text/javascript">
+    // Connect to the Socket.IO server
     var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
     
     socket.on('connect', function() {
-        console.log("[DEBUG] Socket connected (common chat).");
+        console.log("[DEBUG] Socket connected in common chat.");
+        // Join the personal room for the user (for private message notifications, etc.)
         socket.emit('join_user', { username: "{{ current_user.username }}" });
     });
     
+    // Get DOM elements
     const chatForm = document.getElementById('chat-form');
     const chatBox = document.getElementById('chat-box');
     const mediaInput = document.getElementById('media-file');
     const fileUrlField = document.getElementById('file_url');
     const fileTypeField = document.getElementById('file_type');
     
-    // Handle file selection and AJAX upload
+    // When a file is selected, upload it via AJAX to the server.
     mediaInput.onchange = function() {
         var file = mediaInput.files[0];
         if (!file) return;
@@ -70,11 +73,13 @@
             } else {
                 fileUrlField.value = data.file_url;
                 fileTypeField.value = data.file_type;
+                console.log("[DEBUG] Uploaded file:", data);
             }
         })
-        .catch(err => console.error(err));
+        .catch(err => console.error("[DEBUG] Upload error:", err));
     };
     
+    // When the form is submitted, send the message (text and any media info) via Socket.IO.
     chatForm.addEventListener('submit', function(e) {
         e.preventDefault();
         const messageText = chatForm.querySelector('textarea').value;
@@ -86,15 +91,16 @@
             file_url: file_url, 
             file_type: file_type 
         });
-        // Clear the form fields.
+        // Clear the message and file fields.
         chatForm.querySelector('textarea').value = "";
         mediaInput.value = "";
         fileUrlField.value = "";
         fileTypeField.value = "";
     });
     
+    // When a message is received from the server, append it to the chat box.
     socket.on('receive_message', function(data) {
-        console.log("[DEBUG] Received common message:", data);
+        console.log("[DEBUG] Received message:", data);
         var p = document.createElement('p');
         var usernameHTML = data.username;
         if (data.username !== "{{ current_user.username }}") {
@@ -111,11 +117,12 @@
         content += ' <small>(' + data.timestamp + ')</small>';
         p.innerHTML = content;
         chatBox.appendChild(p);
+        // Auto-scroll to the bottom
         chatBox.scrollTop = chatBox.scrollHeight;
     });
     
     socket.on('error', function(data) {
-        console.error("[DEBUG] Error:", data.error);
+        console.error("[DEBUG] Socket error:", data.error);
         alert(data.error);
     });
 </script>

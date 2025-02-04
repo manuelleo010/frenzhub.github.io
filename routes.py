@@ -96,11 +96,12 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user and check_password_hash(user.password, form.password.data):
+            # Prevent simultaneous login: if already logged in, reject the new login.
             if user.logged_in:
-                flash('This user is already logged in from another device.', 'danger')
+                flash('This user is already logged in from another device. Please log out from that device first.', 'danger')
                 return redirect(url_for('main.login'))
             login_user(user)
-            user.logged_in = True
+            user.logged_in = True  # Mark the user as logged in
             db.session.commit()
             flash('Successfully logged in!', 'success')
             return redirect(url_for('main.common_chat'))
@@ -111,6 +112,7 @@ def login():
 @main.route('/logout')
 @login_required
 def logout():
+    # Mark the user as logged out before logging out
     current_user.logged_in = False
     db.session.commit()
     logout_user()
