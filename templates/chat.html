@@ -7,6 +7,24 @@
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
   <!-- Font Awesome for attachment icon -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    /* Additional style for online users sidebar */
+    #online-users {
+      border: 1px solid #ddd;
+      padding: 10px;
+      height: 300px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+    }
+    .online-user {
+      cursor: pointer;
+      padding: 5px;
+      border-bottom: 1px solid #eee;
+    }
+    .online-user:hover {
+      background-color: #f0f0f0;
+    }
+  </style>
 </head>
 <body>
   <div class="container mt-4">
@@ -20,25 +38,36 @@
       {% endwith %}
     </div>
     <div class="d-flex justify-content-between align-items-center">
-      <h2>Welcome, {{ username }}</h2>
+      <h2>Welcome, <span id="current-username">{{ username }}</span></h2>
       <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">Logout</a>
     </div>
-    <div class="mt-3">
-      <button class="btn btn-primary" id="commonRoomBtn">Common Chat Room</button>
-      <button class="btn btn-secondary" id="privateRoomBtn">Private Chat Room</button>
-    </div>
-    <div id="chat-room" data-room="common" class="mt-3">
-      <h3 id="room-name">Common Chat Room</h3>
-      <div id="messages" class="border p-2" style="height:300px; overflow-y: scroll;"></div>
-      <form id="messageForm" class="form-inline mt-2">
-        <input id="messageInput" autocomplete="off" placeholder="Type a message" class="form-control mr-2 flex-grow-1" required>
-        <button type="submit" class="btn btn-success mr-2">Send</button>
-        <!-- Attachment icon: clicking triggers file upload -->
-        <label for="fileInput" class="attachment-label btn btn-outline-secondary mb-0">
-          <i class="fas fa-paperclip"></i>
-        </label>
-        <input type="file" id="fileInput" style="display: none;">
-      </form>
+    <div class="row mt-3">
+      <!-- Left column: Chat and controls -->
+      <div class="col-md-8">
+        <div>
+          <button class="btn btn-primary" id="commonRoomBtn">Common Chat Room</button>
+        </div>
+        <div id="chat-room" data-room="common" class="mt-3">
+          <h3 id="room-name">Common Chat Room</h3>
+          <div id="messages" class="border p-2" style="height:300px; overflow-y: scroll;"></div>
+          <form id="messageForm" class="form-inline mt-2">
+            <input id="messageInput" autocomplete="off" placeholder="Type a message" class="form-control mr-2 flex-grow-1" required>
+            <button type="submit" class="btn btn-success mr-2">Send</button>
+            <!-- Attachment icon: clicking triggers file upload -->
+            <label for="fileInput" class="attachment-label btn btn-outline-secondary mb-0">
+              <i class="fas fa-paperclip"></i>
+            </label>
+            <input type="file" id="fileInput" style="display: none;">
+          </form>
+        </div>
+      </div>
+      <!-- Right column: Online Users -->
+      <div class="col-md-4">
+        <div id="online-users">
+          <h5>Online Users</h5>
+          <!-- List populated dynamically -->
+        </div>
+      </div>
     </div>
   </div>
   <!-- SocketIO client library -->

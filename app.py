@@ -1,5 +1,5 @@
 import eventlet
-eventlet.monkey_patch()  # This must come before any other imports!
+eventlet.monkey_patch()  # MUST be at the very top
 
 import os
 import uuid
@@ -9,7 +9,7 @@ from flask import (
     Flask, render_template, request, redirect, url_for,
     session, flash, jsonify
 )
-from flask_socketio import SocketIO, join_room, leave_room, emit
+from flask_socketio import SocketIO, join_room, leave_room, emit, disconnect, request
 from werkzeug.utils import secure_filename
 
 from models import db, User
@@ -26,6 +26,10 @@ app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov', '
 # Initialize extensions
 db.init_app(app)
 socketio = SocketIO(app, manage_session=False)
+
+# Global dictionary to keep track of connected users:
+# Mapping username -> socket id
+online_users = {}
 
 # Create database tables if they don't exist
 with app.app_context():
@@ -148,6 +152,26 @@ def upload():
 # ---------------------------
 # SOCKETIO EVENTS
 # ---------------------------
+@socketio.on('connect')
+def on_connect():
+    username = session.get('username')
+    if username:
+        online_users[username] = request.sid
+        # Send updated list of online users to everyone
+        socketio.emit('online_users', list(online_users.keys()), broadcast=True)
+
+@socketio.on('disconnect')
+def on_disconnect():
+    username = session.get('username')
+    if username and username in online_users:
+        del online_users[username]
+        socketio.emit('online_users', list(online_users.keys()), broadcast=True)
+    if username:
+        user = User.query.filter_by(username=username).first()
+        if user:
+            user.active_session = None
+            db.session.commit()
+
 @socketio.on('join')
 def on_join(data):
     room = data['room']
@@ -173,14 +197,23 @@ def text(data):
         'msg': f"{session.get('username', 'Anonymous')}: {message}"
     }, room=room)
 
-@socketio.on('disconnect')
-def on_disconnect():
-    username = session.get('username')
-    if username:
-        user = User.query.filter_by(username=username).first()
-        if user:
-            user.active_session = None
-            db.session.commit()
+# New event: Start a private chat between two users.
+@socketio.on('start_private')
+def start_private(data):
+    target_username = data.get('target')
+    sender = session.get('username')
+    if not target_username or not sender:
+        return
+    # Create a unique private room name based on sorted usernames.
+    room = 'private_' + '_'.join(sorted([sender, target_username]))
+    # Let the sender join the private room.
+    join_room(room)
+    # If the target user is online, send them an initiation event.
+    if target_username in online_users:
+        target_sid = online_users[target_username]
+        socketio.emit('initiate_private', {'room': room, 'sender': sender}, room=target_sid)
+    # Inform the sender to switch to the private room.
+    emit('private_started', {'room': room, 'with': target_username})
 
 # ---------------------------
 # MAIN
