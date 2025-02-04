@@ -1,15 +1,50 @@
-from flask import Blueprint, render_template, redirect, url_for, flash
+import os
+import datetime
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_user, current_user, logout_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 from extensions import db, socketio
 from models import User, Message, PrivateMessage
 from forms import RegistrationForm, LoginForm, MessageForm
 from flask_socketio import emit, join_room
 from sqlalchemy import or_, and_
-import datetime
 
 main = Blueprint('main', __name__)
 
+# --------------------
+# Helper function for media uploads
+def allowed_file(filename):
+    ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'mp4', 'mov', 'avi'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# Route to handle media upload via AJAX.
+@main.route('/upload_media', methods=['POST'])
+@login_required
+def upload_media():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        upload_folder = current_app.config['UPLOAD_FOLDER']
+        # Ensure the folder exists.
+        os.makedirs(upload_folder, exist_ok=True)
+        file_path = os.path.join(upload_folder, filename)
+        file.save(file_path)
+        file_url = url_for('static', filename='uploads/' + filename)
+        # Determine file type:
+        ext = filename.rsplit('.', 1)[1].lower()
+        if ext in ['jpg', 'jpeg', 'png', 'gif']:
+            file_type = 'image'
+        else:
+            file_type = 'video'
+        return jsonify({'file_url': file_url, 'file_type': file_type})
+    return jsonify({'error': 'File type not allowed'}), 400
+
+# --------------------
 @main.route('/')
 def index():
     if current_user.is_authenticated:
@@ -38,12 +73,10 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user and check_password_hash(user.password, form.password.data):
-            # Prevent simultaneous logins.
             if user.logged_in:
                 flash('This user is already logged in from another device.', 'danger')
                 return redirect(url_for('main.login'))
             login_user(user)
-            # Mark the user as logged in.
             user.logged_in = True
             db.session.commit()
             flash('Successfully logged in!', 'success')
@@ -52,11 +85,9 @@ def login():
             flash('Login unsuccessful. Please check username and password', 'danger')
     return render_template('login.html', form=form)
 
-
 @main.route('/logout')
 @login_required
 def logout():
-    # Mark the user as logged out.
     current_user.logged_in = False
     db.session.commit()
     logout_user()
@@ -68,7 +99,6 @@ def logout():
 def common_chat():
     form = MessageForm()
     messages = Message.query.order_by(Message.timestamp.asc()).all()
-    # Mark messages as read if not from the current user.
     now = datetime.datetime.utcnow()
     updated = False
     for msg in messages:
@@ -93,11 +123,9 @@ def personal_chat(username):
             and_(PrivateMessage.sender_id == recipient.id, PrivateMessage.recipient_id == current_user.id)
         )
     ).order_by(PrivateMessage.timestamp.asc()).all()
-    # Mark messages as read (if not sent by the current user)
     now = datetime.datetime.utcnow()
     updated = False
     for msg in messages:
-        # Only mark as read if the current user did not send it
         if msg.sender_id != current_user.id and msg.read_at is None:
             msg.read_at = now
             updated = True
@@ -105,7 +133,8 @@ def personal_chat(username):
         db.session.commit()
     return render_template('personal_chat.html', form=form, messages=messages, recipient=recipient)
 
-# Socket.IO event: When a client connects, they join their personal room.
+# --------------------
+# Socket.IO events remain largely as before, with added support for media fields.
 @socketio.on('join_user')
 def on_join_user(data):
     username = data.get('username')
@@ -114,56 +143,64 @@ def on_join_user(data):
         join_room(room)
         print(f"[DEBUG] User {username} joined room {room}.")
 
-# Socket.IO event for common chat messages.
 @socketio.on('send_message')
 def handle_send_message_event(data):
     msg_text = data.get('message')
     username = data.get('username')
-    print(f"[DEBUG] Received common message from {username}: {msg_text}")
+    file_url = data.get('file_url')  # May be None
+    file_type = data.get('file_type')  # May be None
+    print(f"[DEBUG] Received common message from {username}: {msg_text} | file: {file_url}")
     user = User.query.filter_by(username=username).first()
-    if user and msg_text:
-        message = Message(user_id=user.id, username=user.username, message=msg_text)
+    if user and (msg_text or file_url):
+        message = Message(user_id=user.id, username=user.username, message=msg_text,
+                          file_url=file_url, file_type=file_type)
         db.session.add(message)
         db.session.commit()
         emit('receive_message', {
             'message': msg_text,
             'username': username,
-            'timestamp': message.timestamp.strftime('%Y-%m-%d %H:%M')
+            'timestamp': message.timestamp.strftime('%Y-%m-%d %H:%M'),
+            'file_url': file_url,
+            'file_type': file_type
         }, broadcast=True)
     else:
         print("[DEBUG] Error in send_message: invalid message or user")
         emit('error', {'error': 'Invalid message or user.'})
 
-# Socket.IO event for private chat messages.
 @socketio.on('send_private_message')
 def handle_send_private_message_event(data):
     msg_text = data.get('message')
     sender_username = data.get('sender')
     recipient_username = data.get('recipient')
-    print(f"[DEBUG] Received private message from {sender_username} to {recipient_username}: {msg_text}")
+    file_url = data.get('file_url')
+    file_type = data.get('file_type')
+    print(f"[DEBUG] Received private message from {sender_username} to {recipient_username}: {msg_text} | file: {file_url}")
     sender = User.query.filter_by(username=sender_username).first()
     recipient = User.query.filter_by(username=recipient_username).first()
-    if sender and recipient and msg_text:
-        private_msg = PrivateMessage(sender_id=sender.id, recipient_id=recipient.id, message=msg_text)
+    if sender and recipient and (msg_text or file_url):
+        private_msg = PrivateMessage(sender_id=sender.id, recipient_id=recipient.id, message=msg_text,
+                                       file_url=file_url, file_type=file_type)
         db.session.add(private_msg)
         db.session.commit()
         room = get_private_room(sender.id, recipient.id)
         emit('receive_private_message', {
             'message': msg_text,
             'sender': sender_username,
-            'timestamp': private_msg.timestamp.strftime('%Y-%m-%d %H:%M')
+            'timestamp': private_msg.timestamp.strftime('%Y-%m-%d %H:%M'),
+            'file_url': file_url,
+            'file_type': file_type
         }, room=room)
-        # Also, send a private message request to the recipient’s personal room.
         emit('private_message_request', {
             'message': msg_text,
             'sender': sender_username,
-            'timestamp': private_msg.timestamp.strftime('%Y-%m-%d %H:%M')
+            'timestamp': private_msg.timestamp.strftime('%Y-%m-%d %H:%M'),
+            'file_url': file_url,
+            'file_type': file_type
         }, room="user_" + recipient.username)
     else:
         print("[DEBUG] Error in send_private_message: invalid data")
         emit('error', {'error': 'Invalid message, sender, or recipient.'})
 
-# Socket.IO event for joining a private chat room.
 @socketio.on('join_private')
 def on_join_private(data):
     sender_username = data.get('sender')
@@ -180,10 +217,8 @@ def on_join_private(data):
         print("[DEBUG] Error in join_private: invalid sender or recipient")
         emit('error', {'error': 'Invalid sender or recipient.'})
 
-# Socket.IO event for rejecting a private chat request.
 @socketio.on('reject_private_message')
 def handle_reject_private_message(data):
-    # 'sender' is the user rejecting (the recipient) and 'recipient' is the original sender.
     rejecting_user = data.get('sender')
     original_sender = data.get('recipient')
     print(f"[DEBUG] {rejecting_user} rejected private chat from {original_sender}")
@@ -196,5 +231,4 @@ def handle_reject_private_message(data):
         emit('error', {'error': 'Error processing rejection.'})
 
 def get_private_room(user1_id, user2_id):
-    """Generate a unique room name based on two user IDs (order independent)."""
     return 'private_' + '_'.join(map(str, sorted([user1_id, user2_id])))

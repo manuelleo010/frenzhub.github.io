@@ -1,6 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, TextAreaField
 from wtforms.validators import DataRequired, Length, EqualTo, ValidationError
+from flask_wtf.file import FileField, FileAllowed
 from models import User
 
 class RegistrationForm(FlaskForm):
@@ -21,5 +22,7 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
 class MessageForm(FlaskForm):
-    message = TextAreaField('Message', validators=[DataRequired(), Length(min=1, max=500)])
+    message = TextAreaField('Message', validators=[Length(max=500)])
+    file = FileField('Upload Media (Images/Videos only)', 
+                     validators=[FileAllowed(['jpg', 'jpeg', 'png', 'gif', 'mp4', 'mov', 'avi'], 'Images and videos only!')])
     submit = SubmitField('Send')

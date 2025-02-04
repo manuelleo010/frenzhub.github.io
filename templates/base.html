@@ -39,10 +39,10 @@
     
     {% block scripts %}
     <script type="text/javascript">
-      // Determine flash message hide delay based on current page:
+      // Auto-hide flash messages after 3 seconds on chat pages
       var flashDelay = 3000;
       if (window.location.pathname.includes('common_chat') || window.location.pathname.includes('personal_chat')) {
-          flashDelay = 2000;
+          flashDelay = 3000;
       }
       setTimeout(function() {
           var flashMessages = document.getElementById('flash-messages');
@@ -53,19 +53,18 @@
           }
       }, flashDelay);
       
-      // Inactivity detection: if no activity for 2 minutes, alert and log out.
+      // Inactivity detection: 15 minutes (900,000 ms) of no activity triggers logout.
       (function() {
           var inactivityTime = function () {
               var time;
               function resetTimer() {
                   clearTimeout(time);
-                  time = setTimeout(logout, 120000); // 2 minutes = 120,000 ms
+                  time = setTimeout(logout, 900000);
               }
               function logout() {
-                  alert("You have been inactive for 2 minutes. Please log in again.");
+                  alert("You have been inactive for 15 minutes. Please log in again.");
                   window.location.href = "{{ url_for('main.logout') }}";
               }
-              // Events that reset the inactivity timer
               window.onload = resetTimer;
               document.onmousemove = resetTimer;
               document.onkeydown = resetTimer;

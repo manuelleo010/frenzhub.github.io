@@ -8,5 +8,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
         'sqlite:///' + os.path.join(basedir, 'app.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    # Set permanent session lifetime to 2 minutes.
-    PERMANENT_SESSION_LIFETIME = timedelta(minutes=2)
+    # Session lasts 15 minutes of inactivity.
+    PERMANENT_SESSION_LIFETIME = timedelta(minutes=15)
+    # Upload folder for media files
+    UPLOAD_FOLDER = os.path.join(basedir, 'static', 'uploads')
